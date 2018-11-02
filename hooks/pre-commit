@@ -1,0 +1,27 @@
+#!/bin/sh
+# Verify that I'm not pushing stupid stuff in
+
+# This grep should not match newly added lines
+grep_filter='pdb.set_trace|todo: remove'
+
+if git rev-parse --verify HEAD >/dev/null 2>&1
+then
+	against=HEAD
+else
+	# Initial commit: diff against an empty tree object
+	against=4b825dc642cb6eb9a060e54bf8d69288fbee4904
+fi
+
+# Redirect output to stderr.
+exec 1>&2
+
+if test $(git diff --cached --unified=0 --no-prefix $against | \
+          egrep -ve '^\+\+\+' | egrep -e '^\+' | \
+          egrep -ie "$grep_filter" | \
+          wc -l) != 0
+then
+    echo "ERROR: trying to commit crap:"
+    git diff --cached --color | egrep -ie "$grep_filter|\+\+\+" | egrep -B 1 -ie "$grep_filter"
+    exit 1
+fi
+
